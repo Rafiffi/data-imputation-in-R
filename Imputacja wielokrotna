@@ -1,0 +1,155 @@
+### ustawić ścieżkę dostępu - Session / Set Working directory
+setwd("C:/Users/rafal/Desktop/Zajęcia nr 6")
+
+
+### wczytać zbiór danych z brakami irisNA.txt oraz zbiór kompletny iris_kompletny.txt
+
+dane_kompletne <- read.table("dane_kompletne.txt", header = TRUE , stringsAsFactors = TRUE)
+dane_z_brakami <- read.table("dane_z_brakami.txt", header = TRUE , stringsAsFactors = TRUE)
+
+### zweryfikować mechanizm MCAR testem Little'a
+## zainstalować pakiet naniar i uruchomić go
+set.seed(3)
+
+library(naniar)
+
+## polecenie mcar_test
+
+mcar_test(dane_z_brakami)
+
+
+### wczytać oba pakiety
+
+library(mice)
+library(missForest)
+
+set.seed(3)
+
+### rzućmy okiem na wzorce
+
+md.pattern(dane_z_brakami)
+
+### zastępujemy średnią
+
+d.imp.mean <- mice(dane_z_brakami, m = 1, method = "mean")
+dane_z_brakami.mean <- complete(d.imp.mean)
+err.mean <- nrmse(ximp = dane_z_brakami.mean[,3:7], xmis = dane_z_brakami[,3:7], 
+                  xtrue = dane_kompletne[,3:7])
+err.mean
+
+### zastępujemy losowo - losując 1 raz
+
+d.imp.sample <- mice(dane_z_brakami, m = 1, method = "sample")
+dane_z_brakami.sample <- complete(d.imp.sample)
+err.sample <- nrmse(ximp = dane_z_brakami.sample[,3:7], xmis = dane_z_brakami[,3:7],
+                    xtrue = dane_kompletne[,3:7])
+err.sample
+
+### zastępujemy 1 raz metodą pmm - takie regresyjne  (pmm jest domyślnie stosowana)
+
+d.imp.pmm <- mice(dane_z_brakami, m = 1)
+dane_z_brakami.pmm <- complete(d.imp.pmm)
+err.pmm <- nrmse(ximp = dane_z_brakami.pmm[,3:7], xmis = dane_z_brakami[,3:7],
+                 xtrue = dane_kompletne[,3:7])
+err.pmm
+
+### losowo - powtarzając 5 razy
+
+d.imp.sample5 <- mice(dane_z_brakami, m = 5, method = "sample")
+
+## uwaga - mamy wygenerowanych 5 zbiorów danych z uzupełnionymi brakami
+## aby do każdego zajrzeć możemy wygenerować kolejno każdy ze zbiorów:
+
+dane_z_brakami.sample5_1 <- complete(d.imp.sample5, action = 1)
+dane_z_brakami.sample5_2 <- complete(d.imp.sample5, action = 2)
+dane_z_brakami.sample5_3 <- complete(d.imp.sample5, action = 3)
+dane_z_brakami.sample5_4 <- complete(d.imp.sample5, action = 4)
+dane_z_brakami.sample5_5 <- complete(d.imp.sample5, action = 5)
+
+## albo jeden zbiór:
+
+dane_z_brakami.sample5 <- complete(d.imp.sample5, "long")
+
+## możemy też połączyć wyniki imputacji z tych 5 zbiorów w jeden zbiór:
+
+dane_z_brakami.sample5.imp <- cbind(dane_kompletne$NARKO, dane_kompletne$PŁEĆ
+                                    ,0.2*(dane_z_brakami.sample5_1[,3:7] + 
+                                      dane_z_brakami.sample5_2[,3:7] + 
+                                      dane_z_brakami.sample5_3[,3:7] + 
+                                      dane_z_brakami.sample5_4[,3:7] + 
+                                      dane_z_brakami.sample5_5[,3:7]) 
+                               )
+
+colnames(dane_z_brakami.sample5.imp) <- c("NARKO", "PŁEĆ" ,"WIEK", "PZR", "PZ", "PS", "WW")
+
+## i policzyć błąd dla takiego uśrednionego zbioru:
+
+err.sample5 <- nrmse(ximp = dane_z_brakami.sample5.imp[,3:7], xmis = dane_z_brakami[,3:7],
+                     xtrue = dane_kompletne[,3:7])
+err.sample5
+
+### imputacja wielokrotna m = 5 metodą pmm
+
+d.imp.pmm5 <- mice(dane_z_brakami, m = 5)
+
+## generujemy kolejne uzupełnione zbiory:
+
+dane_z_brakami.pmm5_1 <- complete(d.imp.pmm5, action = 1)
+dane_z_brakami.pmm5_2 <- complete(d.imp.pmm5, action = 2)
+dane_z_brakami.pmm5_3 <- complete(d.imp.pmm5, action = 3)
+dane_z_brakami.pmm5_4 <- complete(d.imp.pmm5, action = 4)
+dane_z_brakami.pmm5_5 <- complete(d.imp.pmm5, action = 5)
+
+## tworzymy jeden zbiór:
+
+dane_z_brakami.pmm5.imp <- cbind( dane_kompletne$NARKO, dane_kompletne$PŁEĆ,
+                                   0.2*(dane_z_brakami.pmm5_1[,3:7] + 
+                                   dane_z_brakami.pmm5_2[,3:7] + 
+                                   dane_z_brakami.pmm5_3[,3:7] + 
+                                   dane_z_brakami.pmm5_4[,3:7] + 
+                                   dane_z_brakami.pmm5_5[,3:7]))
+
+colnames(dane_z_brakami.pmm5.imp) <- c("NARKO", "PŁEĆ" ,"WIEK", "PZR", "PZ", "PS", "WW")
+## liczymy błąd:
+
+err.pmm5 <- nrmse(ximp = dane_z_brakami.pmm5.imp[,3:7], xmis = dane_z_brakami[,3:7],
+                  xtrue = dane_kompletne[,3:7])
+err.pmm5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### uzupełniamy braki za pomocą missForest:
+
+
+
+dane_z_brakami.miss <- missForest(dane_z_brakami, xtrue = dane_kompletne)
+
+## zbiór uzupełniony:
+
+dane_z_brakami.miss.imp <- dane_z_brakami.miss$ximp
+
+## błąd:
+
+dane_z_brakami.miss$error
+
+
+## wyniki miss forest 
+
+#write.table(dane_z_brakami.miss.imp[,1:7], file="narco_imp_miss_forest.txt", row.names=FALSE)
+
+
+
+
+
