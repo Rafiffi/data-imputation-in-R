@@ -1,0 +1,48 @@
+### ustawić ścieżkę dostępu - Session / Set Working directory
+setwd("C:/Users/rafal/Desktop/Zajęcia nr 7")
+### wczytać zbiory danych z brakami oraz kompletne
+
+dane_kompletne <- read.table("dane_kompletne.txt", header = TRUE , stringsAsFactors = TRUE)
+dane_z_brakami <- read.table("dane_z_brakami.txt", header = TRUE , stringsAsFactors = TRUE)
+dane_irmi_3nn <- read.table("narco_imp_irmi_3NN.txt", header = TRUE , stringsAsFactors = TRUE)
+dane_missForest <- read.table("narco_imp_miss_forest.txt", header = TRUE , stringsAsFactors = TRUE)
+library(mice)
+
+set.seed(3)
+
+### dla zbioru narco - uzupełniamy brak za pomocą pmm, m = 5 ( 5 to minimum) 
+
+narco.imp.pmm5 <- mice(dane_z_brakami, m = 5) 
+
+### wykonanie analiz na każdym z uzyskanych zbiorów danych (model reg. logistycznej)
+
+fit.narco_PMM <- with(narco.imp.pmm5, glm(NARKO ~ PŁEĆ + WIEK + PZR + PS + PZ + WW
+                                     , family = binomial))
+
+
+summary(pool(fit.narco_PMM)) 
+
+a <- narco.imp.pmm5[["data"]]
+### model na danych kompletnych:
+
+fit.narco.kompletny <- glm(NARKO ~ PŁEĆ + WIEK + PZR + PS + PZ + WW,
+                          family = binomial, data = dane_kompletne)
+
+summary(fit.narco.kompletny)
+
+## model dla imputacji mieszanej 
+
+fit.narco.mieszana <- glm(NARKO ~ PŁEĆ + WIEK + PZR + PS + PZ + WW,
+                           family = binomial, data = dane_irmi_3nn)
+
+summary(fit.narco.mieszana)
+
+### uzupełniamy braki w zbiorze dane_z_brakami za pomoca missForest
+
+fit.narco.missForest <- glm(NARKO ~ PŁEĆ + WIEK + PZR + PS + PZ + WW,
+                          family = binomial, data = dane_missForest)
+
+summary(fit.narco.missForest)
+
+
+
