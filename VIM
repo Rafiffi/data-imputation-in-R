@@ -1,0 +1,72 @@
+### ustawić ścieżkę dostępu - Session / Set Working directory
+setwd("C:/Users/rafal/Desktop/Zajęcia nr 4")
+### zainstalować pakiet VIM i uruchomić go (DO WIZUALIZACJI DANYCH)
+
+
+library(VIM)
+
+
+### wczytać zbiory danych
+
+
+
+dane_kompletne <- read.table("dane_kompletne.txt", header = TRUE)
+dane_z_brakami <- read.table("dane_z_brakami.txt", header = TRUE)
+
+### wykres zagregowany braków danych
+
+
+a3 <- aggr(dane_z_brakami, plot = FALSE)
+
+
+plot(a3, numbers = TRUE, prop = FALSE)
+
+### wykres macierzowy
+par(mfrow = c(1, 1))
+
+matrixplot(dane_z_brakami)
+matrixplot(dane_z_brakami, sortby = "NARKO")
+matrixplot(dane_z_brakami, sortby = "PŁEĆ")
+# braki wyglądają na losowe 
+cor(dane_z_brakami[3:7], use = "complete.obs")
+cor(dane_z_brakami[3:7], use = "pairwise.complete.obs")
+cor(dane_kompletne[3:7])
+### margin plot - wykres rozrzutu dla 2 zmiennych 
+
+
+
+km1 <- dane_z_brakami[, c("PZR", "WW")] 
+marginplot(km1) 
+
+
+
+km2 <- dane_z_brakami[, c("PZ", "WW")]
+marginplot(km2) 
+
+### jeszcze jeden wykres rozrzutu - z liniami pokazującymi braki
+km3 <- dane_z_brakami[, c("PS", "WW")]
+marginplot(km3)
+
+
+
+pbox(dane_z_brakami, pos = 7)
+
+
+
+pbox(dane_z_brakami, pos = 3) 
+
+
+
+histMiss(km1, pos = 2) 
+
+
+
+histMiss(kredMCAR, pos = 6 , breaks = 6)
+
+
+
+spineMiss(km1, pos = 2) 
+
+
+
+spineMiss(kredNMAR[, c("RATA", "KWOTA")])
