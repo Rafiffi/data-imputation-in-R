@@ -1,0 +1,184 @@
+### ustawić ścieżkę dostępu - Session / Set Working directory
+setwd("C:/Users/rafal/Desktop/Zajęcia nr 5")
+
+set.seed(3)
+### wczytać zbiór danych
+
+dane_kompletne <- read.table("dane_kompletne.txt", header = TRUE)
+dane_z_brakami <- read.table("dane_z_brakami.txt", header = TRUE)
+
+
+### zweryfikować mechanizm MCAR testem Little'a
+
+## zainstalować pakiet naniar i uruchomić go
+
+#install.packages("naniar")
+library(naniar)
+
+## polecenie mcar_test
+
+
+mcar_test(dane_z_brakami) ## h0 niema podtaw pv > 0,05 - braki są losowe (dowolne metody uzupełniania)
+
+### zwizualizować braki w obu zbiorach - z wykorzystaniem pakietu visdat 
+
+## zainstalować pakiet visdat i uruchomić go
+
+#install.packages("visdat")
+library(visdat)
+
+vis_miss(dane_z_brakami) # wyglądają na losowe więc spoko, little potwierdza
+
+
+
+miss_var_summary(dane_z_brakami) # ile czego brakuje (liczba,odsetek)
+miss_var_table(dane_z_brakami) # 
+n_var_complete(dane_z_brakami) # ile mamy kompletnych zmiennych
+n_case_complete(dane_z_brakami) # liczba kompletnych wierszy 
+
+## zestawienia graficzne
+
+gg_miss_var(dane_z_brakami)
+gg_miss_which(dane_z_brakami) # na grupie nie ma braków
+gg_miss_case(dane_z_brakami) 
+gg_miss_fct(dane_z_brakami, fct = NARKO)
+gg_miss_fct(dane_z_brakami, fct = PŁEĆ)
+gg_miss_upset(dane_z_brakami, nsets = 7) # nsets = 7 - tyle ile zmiennych
+
+
+### imputacja jednostkowa braków z pakietem VIM
+
+### zainstalować pakiet VIM i uruchomić go
+
+#install.packages("VIM")
+library(VIM)
+
+### bez brakóW 
+
+marginplot(dane_kompletne[, c("WW","PZR")])
+marginplot(dane_kompletne[, c("WIEK","PS")])
+
+### hotdeck imputation
+
+narco_imp_hot <- hotdeck(dane_z_brakami, domain_var = "NARKO") # ma wyszukiwać podobne obiekty z tej samej grupy  
+
+
+## grafika po imputacji
+
+marginmatrix(narco_imp_hot, delimiter="_imp")
+matrixplot(narco_imp_hot, delimiter = "_imp")
+marginplot(narco_imp_hot[, c("WW","PZR", "WW_imp", "PZR_imp" )], delimiter = "_imp")
+
+# pomarańczowe i brązowe imputowane
+
+### kNN imputation (domyślnie k = 5 oraz k =3)
+
+narco_imp_kNN <- kNN(dane_z_brakami) # manual można zmieniać zasady knn np. odległość addRandom - dorzucanie szumu 
+narco_imp_3NN <- kNN(dane_z_brakami, k = 3)
+
+## grafika 
+marginplot(narco_imp_kNN[, c("WW","PZR", "WW_imp", "PZR_imp" )], delimiter = "_imp") 
+# irmi
+narco_imp_irmi <- irmi(dane_z_brakami)
+marginplot(narco_imp_irmi[, c("WW","PZR", "WW_imp", "PZR_imp")], 
+           delimiter = "_imp") 
+
+marginplot(narco_imp_3NN[, c("WIEK","PS", "WIEK_imp", "PS_imp")], 
+           delimiter = "_imp")
+
+### Fast matching/imputation based on categorical variable
+
+narco_imp_match <- matchImpute(dane_z_brakami, match_var = "NARKO") 
+marginplot(narco_imp_match[, c("WW","PZR", "WW_imp", "PZR_imp")], 
+           delimiter = "_imp")
+
+
+### Zapisać uzyskane pliki po imputacji jako pliki tekstowe
+
+#write.table(narco_imp_hot[,1:7], file="narco_imp_hot.txt", row.names=FALSE)
+#write.table(narco_imp_kNN[,1:7], file="narco_imp_kNN.txt", row.names=FALSE)
+#write.table(narco_imp_3NN[,1:7], file="narco_imp_3NN.txt", row.names=FALSE)
+#write.table(narco_imp_irmi[,1:7], file="narco_imp_irmi.txt", row.names=FALSE)
+#write.table(narco_imp_match[,1:7], file="narco_imp_match.txt", row.names=FALSE)
+
+### wczytać kompletne dane i policzyć błąd
+
+#dane_kompletne <- read.table("kred_kompletne.txt", header = TRUE, dec = ",") # dane orginalne
+
+### liczymy RMSE dla kolejnych wyników imputacji
+
+#err_hot <- sqrt(sum((dane_kompletne[,-1] - narco_imp_hot[,2:7])*
+#                      (dane_kompletne[,-1] - narco_imp_hot[,2:7]))
+#                /ncol(dane_kompletne[,-1])/nrow(dane_kompletne[,-1]))
+
+#err_kNN <- sqrt(sum((dane_kompletne[,-1] - narco_imp_kNN[,2:7])*
+#                      (dane_kompletne[,-1] - narco_imp_kNN[,2:7]))
+#                /ncol(dane_kompletne[,-1])/nrow(dane_kompletne[,-1]))
+
+#err_irmi <- sqrt(sum((dane_kompletne[,-1] - narco_imp_irmi[,2:7])*
+#                       (dane_kompletne[,-1] - narco_imp_irmi[,2:7]))
+ #                /ncol(dane_kompletne[,-1])/nrow(dane_kompletne[,-1]))
+
+#err_match <- sqrt(sum((dane_kompletne[,-1] - narco_imp_match[,2:7])*
+#                        (dane_kompletne[,-1] - narco_imp_match[,2:7]))
+#                  /ncol(dane_kompletne[,-1])/nrow(dane_kompletne[,-1]))
+
+#err_hot
+#err_kNN
+#err_irmi # najmniejsze wartości
+#err_match
+
+### inna możliwość do oceny błędu - pakiet missMethods (domyślnie liczy RMSE)
+
+narco_imp_irmi_3NN <- data.frame(narco_imp_3NN[,1:3],narco_imp_irmi[,4:7])
+#write.table(narco_imp_irmi_3NN[,1:7], file="narco_imp_irmi_3NN.txt", row.names=FALSE)
+
+library(missMethods)
+## to samo bez formułu
+err_hot <- evaluate_imputed_values(narco_imp_hot[,3:7], dane_kompletne[,3:7])
+err_5NN <- evaluate_imputed_values(narco_imp_kNN[,3:7], dane_kompletne[,3:7])
+err_3NN <- evaluate_imputed_values(narco_imp_3NN[,3:7], dane_kompletne[,3:7])
+err_irmi <- evaluate_imputed_values(narco_imp_irmi[,3:7], dane_kompletne[,3:7])
+err_match <- evaluate_imputed_values(narco_imp_match[,3:7], dane_kompletne[,3:7])
+err_irmi_3NN <- evaluate_imputed_values(narco_imp_irmi_3NN[,3:7], dane_kompletne[,3:7])
+### jeszcze dla przykładu zastąpienie braków średnią ze zmiennej i błąd RMSE
+
+narco_imp_mean <- impute_mean(dane_z_brakami[,3:7])
+err_mean <-  evaluate_imputed_values(narco_imp_mean, dane_kompletne[,3:7])
+
+
+
+
+#### NRMSE
+
+library(missForest)
+
+
+x <- nrmse(ximp = dane_kompletne[,3:7], xmis = dane_z_brakami[,3:7], 
+                  xtrue = dane_kompletne[,3:7])
+
+NRMSE_hot <- nrmse(ximp = narco_imp_hot[,3:7], xmis = dane_z_brakami[,3:7], 
+                   xtrue = dane_kompletne[,3:7])
+
+NRMSE_5NN <- nrmse(ximp = narco_imp_kNN[,3:7], xmis = dane_z_brakami[,3:7], 
+                   xtrue = dane_kompletne[,3:7])
+
+NRMSE_3NN <- nrmse(ximp = narco_imp_3NN[,3:7], xmis = dane_z_brakami[,3:7], 
+                   xtrue = dane_kompletne[,3:7])
+
+NRMSE_irmi <- nrmse(ximp = narco_imp_irmi[,3:7], xmis = dane_z_brakami[,3:7], 
+                   xtrue = dane_kompletne[,3:7])
+
+NRMSE_irmi_3NN <- nrmse(ximp = narco_imp_irmi_3NN[,3:7], xmis = dane_z_brakami[,3:7], 
+                   xtrue = dane_kompletne[,3:7])
+
+NRMSE_mean <- nrmse(ximp = narco_imp_mean, xmis = dane_z_brakami[,3:7], 
+                    xtrue = dane_kompletne[,3:7])
+NRMSE_match <- nrmse(ximp = narco_imp_match[,3:7], xmis = dane_z_brakami[,3:7], 
+                     xtrue = dane_kompletne[,3:7])
+
+
+NRMSE <- data.frame( NRMSE_mean, NRMSE_hot, NRMSE_3NN, NRMSE_5NN, NRMSE_irmi, NRMSE_match,  NRMSE_irmi_3NN)
+RMSE <- data.frame(err_mean, err_hot,err_3NN, err_5NN , err_irmi, err_match, err_irmi_3NN)
+View(RMSE)
+View(NRMSE)
